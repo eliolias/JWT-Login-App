@@ -1,11 +1,13 @@
 const router = require("express").Router();
 const pool = require('../db');
-const bcrypt = require("bcrypt")
-const jwtGenerator = require("../utils/jwtGenerator")
+const bcrypt = require("bcrypt");
+const jwtGenerator = require("../utils/jwtGenerator");
+const validInfo = require("../middleware/validInfo");
+const authorization  = require("../middleware/authorization")
 
 //registering
 
-router.post("/register", async(req, res) =>{
+router.post("/register", validInfo, async (req, res) =>{
     try{
         //This applies for both register route and login route
         //1. destructure the req.body(name, email, password)
@@ -26,13 +28,13 @@ router.post("/register", async(req, res) =>{
 
         const newUser = await pool.query("INSERT INTO users (user_name, user_email, user_password) VALUES ($1, $2, $3) RETURNING *", [name, email, bcryptPassword])
 
-        res.json(newUser.rows[0]);
+        //res.json(newUser.rows[0]);
 
         //5. generate JWT token
 
         const token = jwtGenerator(newUser.rows[0].user_id);
 
-        //res.json({ token })
+        res.json({ token })
     } catch (err) {
         console.error(err.message);
         res.status(500).send("Server Error");
@@ -41,7 +43,7 @@ router.post("/register", async(req, res) =>{
 
 //login route
 
-router.post("/login", async (req, res) => {
+router.post("/login", validInfo, async (req, res) => {
     try {
         //1. destructure the req.body
 
@@ -73,6 +75,17 @@ router.post("/login", async (req, res) => {
         console.error(err.message);
         res.status(500).send("Server Error");
     }
-})
+});
+
+router.get("/is-verify", authorization, async (req, res) => {
+    try{
+
+        res.json(true)
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
 
 module.exports = router;
